@@ -1,0 +1,96 @@
+---
+title: "TIdyTuesday European Energy"
+author: "Jeff Grayum"
+date: "12/14/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Libraries
+```{r}
+library(tidyverse)
+library(tidytuesdayR)
+library(ggthemes)
+library(scales)
+library(tvthemes)
+```
+
+Loading datasets
+```{r}
+tuesdata <- tidytuesdayR::tt_load('2020-08-04')
+
+energy_types <- tuesdata$energy_types
+
+country_totals <- tuesdata$country_totals
+```
+
+
+Exploring the data, some visualizations.
+```{r}
+energy_types %>%
+  view()
+
+energy_types %>%
+  str()
+
+energy_types %>%
+  distinct(country_name)
+
+energy_types %>%
+  count(type, sort = TRUE)
+
+types_pivoted <- energy_types %>%
+  pivot_longer(cols = c("2016", "2017", "2018"), #cols = starts_with("2") works too!
+               names_to = "year", #creats title for "years" column
+               values_to = "gigawatt_hours") %>%  #creates title for "values" column
+  view()
+
+types_pivoted %>%
+  group_by(country) %>%
+  ggplot(aes(year, value, fill = type)) +
+  geom_col() +
+  facet_wrap(~ country_name, scales = "free_y") +
+  labs(title = "How are European countries generating energy?",
+       x = "",
+       y = "", 
+       fill = "Type") +
+  theme_fivethirtyeight() +
+  theme(axis.title = element_text(),
+        text = element_text(family = "Times New Roman")) 
+
+```
+
+That was a bit of a fail.. David's take.
+Some ideas:  
+-A map (no animation since we only have three years worth of data) 
+-Graph of energy consumption by type over time
+-Exports, imports, etc.
+```{r}
+energy_types %>% 
+  count(level, sort = TRUE)
+
+energy_types %>%
+  count(level, type, sort = TRUE) #All level 2's from Pumped Hydro power.
+
+energy_types %>%
+  count(country_name, sort = TRUE)
+
+```
+
+```{r}
+energy_types %>%
+  pivot_longer(cols = starts_with("2"),
+               names_to = "year",
+               values_to = "gigawatt_hours")
+```
+
+```{r}
+country_totals %>%
+  view()
+```
+

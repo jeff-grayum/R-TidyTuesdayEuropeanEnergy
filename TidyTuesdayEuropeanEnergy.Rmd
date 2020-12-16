@@ -18,6 +18,7 @@ library(tidytuesdayR)
 library(ggthemes)
 library(scales)
 library(tvthemes)
+library(tidytext)
 ```
 
 Loading datasets
@@ -83,11 +84,97 @@ energy_types %>%
 ```
 
 ```{r}
-energy_types %>%
+#UK comes up as country_name = NA.  Will replace NA's with United Kingom with this trick!
+
+energy_types <- tuesdata$energy_types %>%
   pivot_longer(cols = starts_with("2"),
                names_to = "year",
-               values_to = "gigawatt_hours")
+               values_to = "gigawatt_hours") %>%
+  mutate(year = as.integer(year)) %>%
+  replace_na(list(country_name = "United Kingdom"))
+
+europe_totals <- energy_types %>%
+  filter(level == "Level 1") %>%
+  group_by(year, type) %>%
+  summarize(total_power = sum(gigawatt_hours)) %>%
+  ungroup() %>%
+  mutate(type = fct_reorder(type, total_power, sum)) 
+
+europe_totals %>%
+  ggplot(aes(year, total_power, fill = type)) +
+  geom_col() +
+  scale_y_continuous(labels = comma) +
+  theme_fivethirtyeight() +
+  theme(axis.title = element_text(),
+        text = element_text(family = "Times New Roman")) +
+  labs(title = "How are European countries generating energy?",
+       x = "Year",
+       y = "Total power (gigawatt hrs)",
+       fill = "Type of power")
+
+europe_totals %>%
+  ggplot(aes(year, total_power)) +
+  geom_col() +
+  scale_y_continuous(labels = comma) +
+  theme_fivethirtyeight() +
+  theme(axis.title = element_text(),
+        text = element_text(family = "Times New Roman")) +
+  labs(title = "How are European countries generating energy?",
+       x = "",
+       y = "Total power (gigawatt hrs)") +
+  facet_wrap(~ type,
+             scales = "free_y")
+
+
+europe_totals %>%
+  filter(year == 2018) %>%
+  mutate(type = fct_reorder(type, total_power, sum)) %>%
+  ggplot(aes(total_power, type)) +
+  geom_col() +
+  scale_x_continuous(labels = comma) +
+  theme_fivethirtyeight() +
+  theme(axis.title = element_text(),
+        text = element_text(family = "Times New Roman")) +
+  labs(title = "How are European countries generating energy in 2018?",
+       x = "Total power (gigawatt hrs)",
+       y = "")
+  
 ```
+
+
+```{r}
+#A great demo of how to use reorder_within()
+energy_types %>%
+  filter(level == "Level 1",
+         year == 2018,
+         gigawatt_hours > 0, 
+         type != "Other") %>%
+  group_by(type) %>%
+  mutate(country_name = fct_lump(country_name, 10, w = gigawatt_hours)) %>%
+  mutate(country_name = reorder_within(country_name, gigawatt_hours, type, fun = sum),
+         type = fct_reorder(type, -gigawatt_hours, sum)) %>%
+  ggplot(aes(gigawatt_hours, country_name)) +
+  geom_col() +
+  scale_x_continuous(labels = comma) +
+  theme_fivethirtyeight() +
+  theme(axis.title = element_text(),
+        text = element_text(family = "Times New Roman")) +
+  labs(title = "Energy production in European countries in 2018",
+       x = "Power produced (gigawatt hrs)",
+       y = "") +
+  scale_y_reordered() +
+  facet_wrap(~type, scales = "free")
+
+#you can use slice(13) to see what's in row 13!
+#if you want to replace uk with gb for ggflag, do this!
+##mutate(country = fct_recode(country, gb = "uk"))
+
+
+devtools::install_github("rensa/ggflags")
+ 
+```
+
+
 
 ```{r}
 country_totals %>%
